@@ -1,9 +1,12 @@
+using DMS.Server;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Server.Application.Interfaces;
 using Server.Application.Services;
 using Server.Application.Services.Core;
+using Server.Application.Services.Feature;
 using Server.Domain.Middlewares;
 using Server.Infrastructure.Contexts;
 using Server.Infrastructure.DAL;
@@ -72,40 +75,33 @@ void ConfigureServices(IServiceCollection services)
 
     // Swagger
     services.AddEndpointsApiExplorer();
-    services.AddSwaggerGen();
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.SwaggerDoc("v1", new OpenApiInfo
+        {
+            Title = "Dairy Management System Client",
+            Version = "v1"
+        });
 
-    // Dependency Injection
-    services.AddScoped<IEmployeeService, EmployeeService>();
-    services.AddScoped<IEmployeeDAL, EmployeeDAL>();
-    services.AddScoped<IEmployeeRepository, EmplopyeeRepository>();
+        // JWT Bearer
+        options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = ParameterLocation.Header,
+            Description = "Enter JWT token"
+        });
 
-    services.AddScoped<IClientsService, ClientsService>();
-    services.AddScoped<IClientsDAL, ClientsDAL>();
+        //options.AddSecurityRequirement(document =>
+        //    new OpenApiSecurityRequirement
+        //    {
+        //        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+        //    });
+    });
 
-    services.AddScoped<IUsersService, UsersService>();
-    services.AddScoped<IUsersDAL, UsersDAL>();
-
-    services.AddScoped<IUserRolesService, UserRolesService>();
-    services.AddScoped<IUserRolesDAL, UserRolesDAL>();
-
-    services.AddScoped<IDepartmentService, DepartmentService>();
-    services.AddScoped<IDepartmentDAL, DepartmentDAL>();
-
-    // Email Services Dependencies
-    services.AddTransient<IEmailDAL, EmailDAL>();
-    services.AddTransient<IEmailService, EmailService>();
-
-    services.AddTransient<IOtpDAL, OtpDAL>();
-    services.AddTransient<IOTPService, OTPService>();
-
-    // Auth/login services dependencies
-    services.AddSingleton<IJWTTokenService, JWTTokenService>();
-
-    services.AddSingleton<IAuthService, AuthService>();
-    services.AddSingleton<IAuthDAL, AuthDAL>();
-
-    services.AddSingleton<IAppMenusService, AppMenusService>();
-    services.AddSingleton<IAppMenusDAL, AppMenusDAL>();
+    RegisterServices.Register(builder.Services);
 }
 
 void Configure(WebApplication app)
@@ -120,7 +116,16 @@ void Configure(WebApplication app)
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();
-        app.UseSwaggerUI();
+
+        app.UseSwaggerUI(options =>
+        {
+            options.SwaggerEndpoint(
+                "/swagger/v1/swagger.json",
+                "Dairy Management System Client v1"
+            );
+
+            options.RoutePrefix = "swagger";
+        });
     }
 
     // HTTPS
